@@ -6,7 +6,6 @@ int main(void)
 {
     GLFWwindow* window;
 
-    /* Initialize the library */
     if (!glfwInit())
         return -1;
 
@@ -16,7 +15,7 @@ int main(void)
 
 
     /* Create a windowed mode window and its OpenGL context */
-    window = glfwCreateWindow(640, 480, "Hello World", NULL, NULL);
+    window = glfwCreateWindow(640, 480, "Rectangle", NULL, NULL);
     if (!window)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -31,23 +30,90 @@ int main(void)
         return -1;
     }
 
-    glClearColor(1.0, 0.0, 0.0, 1.0);
+    glClearColor(1.0, 1.0, 1.0, 1.0);
+
+    auto vertexShaderCode = R"(
+        #version 330 core
+        layout (location = 0) in vec4 aPos;
+        layout (location = 1) in vec3 aCol;
+
+        out vec3 Color;
+
+        void main() {
+            gl_Position = aPos;
+            Color = aCol;
+        }
+    )";
+
+    unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertexShader, 1, &vertexShaderCode, nullptr);
+    glCompileShader(vertexShader);
+
+    auto fragmentShaderCode = R"(
+        #version 330 core
+        in vec3 Color;
+        out vec4 FragColor;
+
+        void main() {
+            FragColor = vec4(Color, 1.0);
+        }
+    )";
+
+    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentShader, 1, &fragmentShaderCode, nullptr);
+    glCompileShader(fragmentShader);
+
+    GLuint program = glCreateProgram();
+    glAttachShader(program, vertexShader);
+    glAttachShader(program, fragmentShader);
+    glLinkProgram(program);
+
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+
+    float vertices[] = {
+        -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,
+        0.5f, -0.5f,  1.0f, 1.0f, 0.0f,
+        0.5f,  0.5f,  0.0f, 1.0f, 0.0f,
+
+        -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,
+        -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,
+        0.5f, 0.5f,  0.0f, 1.0f, 0.0f,
+    };
+
+    GLuint VAO, VBO;
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(2 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glBindVertexArray(0);
 
     /* Loop until the user closes the window */
-    while (!glfwWindowShouldClose(window) && !glfwGetKey(window, GLFW_KEY_ESCAPE))
+    do
     {
-        /* Render here */
         glClear(GL_COLOR_BUFFER_BIT);
 
-        ///// gl-команди для налаштування інструментів малювання та малювання
+        glUseProgram(program);
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
 
         /* Swap front and back buffers */
         glfwSwapBuffers(window);
 
         /* Poll for and process events */
         glfwPollEvents();
-    }
+    } while (!glfwWindowShouldClose(window) && !glfwGetKey(window, GLFW_KEY_ESCAPE));
 
+    glDeleteBuffers(1, &VBO);
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteProgram(program);
     glfwTerminate();
     return 0;
 }
