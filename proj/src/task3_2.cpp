@@ -1,12 +1,47 @@
 #include <iostream>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <chrono>
+#include <thread>
 
 #include "shader_utils.h"
 #include "texture.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
+
+bool isAnimating = true;
+
+void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
+        isAnimating = !isAnimating;
+        std::cout << "Animation " << (isAnimating ? "resumed" : "paused") << std::endl;
+    }
+}
+
+// Функція обробки кнопок миші
+void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+        isAnimating = !isAnimating;
+        std::cout << "Animation " << (isAnimating ? "resumed" : "paused") << std::endl;
+    }
+}
+
+// Функція для обмеження FPS
+void limitFPS(double targetFPS) {
+    static double lastFrameTime = 0.0;
+    double currentTime = glfwGetTime();
+    double deltaTime = currentTime - lastFrameTime;
+    double targetDelta = 1.0 / targetFPS;
+
+    if (deltaTime < targetDelta) {
+        std::this_thread::sleep_for(
+            std::chrono::milliseconds(static_cast<int>((targetDelta - deltaTime) * 1000))
+        );
+    }
+    lastFrameTime = glfwGetTime();
+}
+
 
 int main(void)
 {
@@ -21,7 +56,7 @@ int main(void)
 
 
     /* Create a windowed mode window and its OpenGL context */
-    window = glfwCreateWindow(800, 600, "Rectangles", NULL, NULL);
+    window = glfwCreateWindow(800, 600, "Rectangle", NULL, NULL);
     if (!window)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -36,6 +71,9 @@ int main(void)
         return -1;
     }
 
+    glfwSetKeyCallback(window, keyCallback);
+    glfwSetMouseButtonCallback(window, mouseButtonCallback);
+
     glClearColor(1.0, 1.0, 1.0, 1.0);
 
     std::string vertexShaderName = "res/shaders/triangle.vert";
@@ -45,32 +83,15 @@ int main(void)
     GLint texture_loc = glGetUniformLocation(program, "uTexture");
 
     float vertices[] = {
-        // ========== Прямокутник 1 - текстура 1 ==========
-        -0.8f,  0.7f,   0.0f, 0.0f,
-        -0.8f,  0.1f,   0.0f, 1.0f,
-        -0.2f,  0.1f,   1.0f, 1.0f,
+        // Трикутник 1
+        -0.5f,  0.5f,   0.0f, 1.0f,
+        -0.5f, -0.5f,   0.0f, 0.0f,
+         0.5f, -0.5f,   1.0f, 0.0f,
 
-        -0.8f,  0.7f,   0.0f, 0.0f,
-        -0.2f,  0.1f,   1.0f, 1.0f,
-        -0.2f,  0.7f,   1.0f, 0.0f,
-
-        // ========== Прямокутник 2 - текстура 2 ==========
-         0.2f,  0.7f,   0.0f, 0.0f,
-         0.2f,  0.1f,   0.0f, 1.0f,
-         0.9f,  0.1f,   1.0f, 1.0f,
-
-         0.2f,  0.7f,   0.0f, 0.0f,
-         0.9f,  0.1f,   1.0f, 1.0f,
-         0.9f,  0.7f,   1.0f, 0.0f,
-
-        // ========== Прямокутник 3 - текстура 3 ==========
-        -0.4f,  0.0f,   0.0f, 0.0f,
-        -0.4f, -0.6f,   0.0f, 1.0f,
-         0.4f, -0.6f,   1.0f, 1.0f,
-
-        -0.4f,  0.0f,   0.0f, 0.0f,
-         0.4f, -0.6f,   1.0f, 1.0f,
-         0.4f,  0.0f,   1.0f, 0.0f
+        // Трикутник 2
+        -0.5f,  0.5f,   0.0f, 1.0f,
+         0.5f, -0.5f,   1.0f, 0.0f,
+         0.5f,  0.5f,   1.0f, 1.0f
     };
 
     GLuint VAO, VBO;
@@ -91,46 +112,58 @@ int main(void)
     glEnableVertexAttribArray(textureCoordsAttribLocation);
     glBindVertexArray(0);
 
-    GLuint texture1 = loadTexture("res/textures/img1.jpg");
-    GLuint texture2 = loadTexture("res/textures/img2.jpg");
-    GLuint texture3 = loadTexture("res/textures/img3.jpg");
+    GLuint texture = loadTexture("res/textures/img3.png");
+
+    auto transformation = glm::mat4(1.0f);
+
+    float rotationAngle = 0.0f;
+    double lastTime = glfwGetTime();
+    const double TARGET_FPS = 60.0;
+    const float ROTATION_SPEED = 90.0f;
 
     /* Loop until the user closes the window */
     do
     {
+
+        double currentTime = glfwGetTime();
+        float deltaTime = static_cast<float>(currentTime - lastTime);
+        lastTime = currentTime;
+
+        if (isAnimating) {
+            rotationAngle += ROTATION_SPEED * deltaTime;
+            if (rotationAngle > 360.0f) {
+                rotationAngle -= 360.0f;
+            }
+        }
+
+        glm::mat4 transformation = glm::mat4(1.0f);
+        transformation = glm::rotate(transformation, glm::radians(rotationAngle), glm::vec3(0.0f, 0.0f, 1.0f));
+
         glClear(GL_COLOR_BUFFER_BIT);
 
         glUseProgram(program);
         glBindVertexArray(VAO);
 
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture1);
+        glBindTexture(GL_TEXTURE_2D, texture);
         glUniform1i(texture_loc, 0);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, texture2);
-        glUniform1i(texture_loc, 1);
-        glDrawArrays(GL_TRIANGLES, 6, 6);
-
-        glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, texture3);
-        glUniform1i(texture_loc, 2);
-        glDrawArrays(GL_TRIANGLES, 12, 6);
+        transformation = glm::rotate(transformation, glm::radians(1.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        glUniformMatrix4fv(transform_loc, 1, GL_FALSE, glm::value_ptr(transformation));
 
         /* Swap front and back buffers */
         glfwSwapBuffers(window);
 
         /* Poll for and process events */
         glfwPollEvents();
+        limitFPS(TARGET_FPS);
     } while (!glfwWindowShouldClose(window) && !glfwGetKey(window, GLFW_KEY_ESCAPE));
 
     glDeleteBuffers(1, &VBO);
     glDeleteVertexArrays(1, &VAO);
     glDeleteProgram(program);
-    glDeleteTextures(1, &texture1);
-    glDeleteTextures(1, &texture2);
-    glDeleteTextures(1, &texture3);
+    glDeleteTextures(1, &texture);
     glfwTerminate();
     return 0;
 }
