@@ -76,7 +76,7 @@ int main(void)
 
     glClearColor(1.0, 1.0, 1.0, 1.0);
 
-    std::string vertexShaderName = "res/shaders/triangle.vert";
+    std::string vertexShaderName = "res/shaders/animated_rect.vert";
     std::string fragmentShaderName = "res/shaders/triangle.frag";
     GLuint program = createProgram(vertexShaderName, fragmentShaderName);
 
