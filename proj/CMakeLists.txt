@@ -55,6 +55,19 @@ target_include_directories(task4 PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src/res
 )
 
+add_executable(cube src/cube.cpp
+        src/utils/shader_utils.cpp
+        src/utils/shader_utils.h
+        src/utils/texture.cpp
+        src/utils/texture.h)
+
+target_link_libraries(cube ${libs})
+
+target_include_directories(cube PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/utils
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/res
+)
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
